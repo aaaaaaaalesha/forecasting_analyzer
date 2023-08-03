@@ -1,4 +1,5 @@
 class DataFetchingTask:
+    """Fetching data using YandexWeatherAPI."""
     pass
 
 
