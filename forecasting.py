@@ -11,7 +11,7 @@ from tasks import (
     DataAggregationTask,
     DataAnalyzingTask,
 )
-from utils import CITIES, get_url_by_city_name
+from utils import CITIES, url_by_city_name
 
 
 def forecast_weather():

@@ -35,7 +35,7 @@ def check_python_version():
         )
 
 
-def get_url_by_city_name(city_name):
+def url_by_city_name(city_name: str) -> str:
     try:
         return CITIES[city_name]
     except KeyError:

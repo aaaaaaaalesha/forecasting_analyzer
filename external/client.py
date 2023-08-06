@@ -3,8 +3,9 @@ import logging
 
 from http import HTTPStatus
 from urllib.request import urlopen
+from urllib.error import HTTPError
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class YandexWeatherAPI:
@@ -18,19 +19,21 @@ class YandexWeatherAPI:
         :param url: url_to_json_data as str
         :return: response data as json
         """
-        return YandexWeatherAPI.__do_req(url)
+        return YandexWeatherAPI._do_req(url)
 
     @staticmethod
-    def __do_req(url: str) -> str:
+    def _do_req(url: str) -> dict:
         """Base request method"""
         try:
             with urlopen(url) as response:
                 resp_body = response.read().decode('utf-8')
                 data = json.loads(resp_body)
-            if response.status != HTTPStatus.OK:
+            if response.status == HTTPStatus.OK:
                 return data
 
             raise Exception(f'Error during execute request. {resp_body.status}: {resp_body.reason}')
+        except (json.JSONDecodeError, HTTPError) as err:
+            raise err
         except Exception as ex:
             logger.error(ex)
             raise Exception(f'Unexpected error: {ex}')
