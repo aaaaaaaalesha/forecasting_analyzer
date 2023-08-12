@@ -22,6 +22,16 @@ CITIES = {
 MIN_MAJOR_PYTHON_VER = 3
 MIN_MINOR_PYTHON_VER = 9
 
+CITY_FIELD = 'city'
+DAYS_FIELD = 'days'
+DATE_FIELD = 'date'
+HOURS_START_FIELD = 'hours_start'
+HOURS_END_FIELD = 'hours_end'
+HOURS_COUNT_FIELD = 'hours_count'
+RELEVANT_COND_HOURS_FIELD = 'relevant_cond_hours'
+TEMP_AVG_FIELD = 'temp_avg'
+RATING_FIELD = 'rating'
+
 
 def check_python_version():
     import sys
