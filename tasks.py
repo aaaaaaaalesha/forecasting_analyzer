@@ -1,12 +1,18 @@
-import http
 import logging
 import json
+import multiprocessing
 
-from concurrent.futures import ThreadPoolExecutor
-from external.client import YandexWeatherAPI
+from abc import ABC, abstractmethod
+from concurrent.futures import (
+    ThreadPoolExecutor,
+    ProcessPoolExecutor,
+)
+
 from urllib.error import HTTPError
 
 from utils import url_by_city_name, CITIES
+from external.client import YandexWeatherAPI
+from external.analyzer import analyze_json
 from exceptions import (
     DataFetchingException,
     DataAnalyzingException,
@@ -16,13 +22,23 @@ from exceptions import (
 
 logger = logging.getLogger(__name__)
 
+MAX_WORKERS = multiprocessing.cpu_count() - 1
 
-class DataFetchingTask:
+
+class Task(ABC):
+    """Abstract task class."""
+
+    @abstractmethod
+    def run(self, *args, **kwargs):
+        pass
+
+
+class DataFetchingTask(Task):
     """Fetching data using YandexWeatherAPI."""
 
-    def __init__(self, client: YandexWeatherAPI, timeout=None):
+    def __init__(self, client: YandexWeatherAPI, **kwagrs):
+        super().__init__(**kwagrs)
         self.client = client
-        self.timeout = timeout
         self.city_to_forecasting_data = {}
 
     def fetch_forecasting(self, city: str) -> None:
@@ -37,15 +53,16 @@ class DataFetchingTask:
             logger.exception(err)
             raise DataFetchingException(err)
 
-    def fetch_cities_forecasting(
+    def run(
             self,
             cities: list[str] = CITIES,
-            max_workers: int = 5,
+            max_workers: int = MAX_WORKERS,
+            timeout: float | None = None,
     ) -> None:
         try:
             logger.info(f'Fetching forecasting started on {max_workers} workers')
-            with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                pool.map(self.fetch_forecasting, cities, timeout=self.timeout)
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                executor.map(self.fetch_forecasting, cities, timeout=timeout)
         except (TimeoutError, Exception) as err:
             msg = f'Failed fetch forecasting data: {err}'
             logger.exception(msg)
@@ -53,8 +70,50 @@ class DataFetchingTask:
         logger.info('Fetching forecasting finished')
 
 
-class DataCalculationTask:
-    pass
+class DataCalculationTask(Task):
+    def __int__(self, city_to_forecasting_data: dict):
+        self.city_to_forecasting_data = city_to_forecasting_data
+        self.queue = multiprocessing.Queue()
+
+    @staticmethod
+    def __is_available_data(day_info: dict) -> bool:
+        return all(
+            field is not None
+            for field in (  # required fields
+                day_info.get('date'),
+                day_info.get('hours_start'),
+                day_info.get('hours_end'),
+                day_info.get('hours_count'),
+                day_info.get('relevant_cond_hours'),
+                day_info.get('temp_avg'),
+            ))
+
+    def _analyze_forecast_producer(
+            self,
+            city: str,
+            forecasting_data: dict,
+    ):
+        analyzed_data: dict = analyze_json(forecasting_data)
+        days_info: list[dict] | None = analyzed_data.get('days')
+        if analyzed_data and days_info is not None:
+            filtered_days_info = [
+                day_info
+                for day_info in days_info
+                if self.__is_available_data(day_info)
+            ]
+            self.queue.put((city, filtered_days_info))
+
+    def run(
+            self,
+            max_workers: int = MAX_WORKERS,
+            timeout: float | None = None,
+    ):
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            executor.map(
+                self._analyze_forecast_producer,
+                self.city_to_forecasting_data.items(),
+                timeout=timeout,
+            )
 
 
 class DataAggregationTask:

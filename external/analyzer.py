@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 from dataclasses import dataclass, field
+from copy import deepcopy
 from functools import reduce
 from operator import getitem
 from typing import Optional, List, Dict
@@ -23,28 +24,12 @@ INPUT_DAY_SUITABLE_CONDITIONS = [
     'partly-cloudy',
     'cloudy',
     'overcast',
-    # 'drizzle',
-    # 'light-rain',
-    # 'rain',
-    # 'moderate-rain',
-    # 'heavy-rain',
-    # 'continuous-heavy-rain',
-    # 'showers',
-    # 'wet-snow',
-    # 'light-snow',
-    # 'snow',
-    # 'snow-showers',
-    # 'hail',
-    # 'thunderstorm',
-    # 'thunderstorm-with-rain',
-    # 'thunderstorm-with-hail'
 ]
 
 OUTPUT_RAW_DATA_KEY = 'raw_data'
 OUTPUT_DAYS_KEY = 'days'
 DEFAULT_OUTPUT_RESULT = {
     OUTPUT_DAYS_KEY: [],
-    # OUTPUT_RAW_DATA_KEY: None,
 }
 
 
@@ -196,8 +181,7 @@ def analyze_json(data):
 
         days.append(d_info.to_json())
 
-    result = DEFAULT_OUTPUT_RESULT
-    # result[OUTPUT_RAW_DATA_KEY] = data
+    result = deepcopy(DEFAULT_OUTPUT_RESULT)
     result[OUTPUT_DAYS_KEY] = days
     return result
 
