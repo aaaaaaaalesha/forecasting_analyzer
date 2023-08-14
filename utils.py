@@ -31,6 +31,9 @@ HOURS_COUNT_FIELD = 'hours_count'
 RELEVANT_COND_HOURS_FIELD = 'relevant_cond_hours'
 TEMP_AVG_FIELD = 'temp_avg'
 RATING_FIELD = 'rating'
+MEAN_SUFFIX = '_mean'
+TEMP_AVG_MEAN_FIELD = f'temp_avg{MEAN_SUFFIX}'
+RELEVANT_COND_HOURS_MEAN_FIELD = f'relevant_cond_hours{MEAN_SUFFIX}'
 
 
 def check_python_version():

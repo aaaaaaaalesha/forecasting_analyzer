@@ -3,7 +3,7 @@ import json
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from multiprocessing import cpu_count, Queue
+from multiprocessing import cpu_count, Manager, Queue
 from concurrent.futures import (
     ThreadPoolExecutor,
     ProcessPoolExecutor,
@@ -32,6 +32,9 @@ from utils import (
     RELEVANT_COND_HOURS_FIELD,
     TEMP_AVG_FIELD,
     RATING_FIELD,
+    TEMP_AVG_MEAN_FIELD,
+    RELEVANT_COND_HOURS_MEAN_FIELD,
+    MEAN_SUFFIX,
 )
 
 logger = logging.getLogger(__name__)
@@ -88,7 +91,7 @@ class DataCalculationTask(Task):
 
     def __init__(self, city_to_forecasting_data: dict):
         self.city_to_forecasting_data: dict = city_to_forecasting_data
-        self.queue: Queue = Queue()  # TODO: Заменить на нужную очередь
+        self.queue = Manager().Queue()
         self.city_to_analyzed_days_info: dict[str, list[dict]] = {}
 
     @staticmethod
@@ -115,6 +118,7 @@ class DataCalculationTask(Task):
 
     def _analyze_forecast(
             self,
+            queue: Queue,
             city: str,
             forecasting_data: dict,
     ):
@@ -127,8 +131,7 @@ class DataCalculationTask(Task):
                 for day_info in days_info
                 if self.__is_available_data(day_info)
             ]
-
-            self.queue.put((city, filtered_days_info))
+            queue.put((city, filtered_days_info))
 
     def run(
             self,
@@ -138,7 +141,9 @@ class DataCalculationTask(Task):
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
             executor.map(
                 self._analyze_forecast,
-                *self.city_to_forecasting_data.items(),
+                [self.queue] * len(self.city_to_forecasting_data),
+                self.city_to_forecasting_data.keys(),
+                self.city_to_forecasting_data.values(),
                 timeout=timeout,
             )
 
@@ -195,7 +200,7 @@ class DataAggregationTask(Task):
         self.days_analyze_df = self.days_analyze_df.merge(
             right=grouped_df,
             on=CITY_FIELD,
-            suffixes=('', '_mean'),
+            suffixes=('', MEAN_SUFFIX),
         )
 
     def run(
@@ -216,9 +221,10 @@ class DataAggregationTask(Task):
 
 
 class DataAnalyzingTask:
+    """Analyzing aggregated data from file."""
     SOURCE_TO_PARSER = {
-        'csv': pd.read_csv,
-        'json': pd.read_json,
+        '.csv': pd.read_csv,
+        '.json': pd.read_json,
     }
 
     def __init__(self, aggregation_path: Path):
@@ -240,26 +246,25 @@ class DataAnalyzingTask:
         except Exception as exc:
             raise DataAnalyzingException(str(exc))
 
-    def run(self, top_index: int = 1):
-        temp_avg_mean_field = f'{TEMP_AVG_FIELD}_mean'
-        relevant_cond_hours_mean_field = f'{RELEVANT_COND_HOURS_FIELD}_mean'
-        top_cities: pd.DataFrame = self.analysing_df.groupby(CITY_FIELD).first()[[
-            temp_avg_mean_field,
-            relevant_cond_hours_mean_field,
+    def _get_top_cities(self, top_index: int = 1) -> pd.DataFrame:
+        return self.analysing_df.groupby(CITY_FIELD).first()[[
+            TEMP_AVG_MEAN_FIELD,
+            RELEVANT_COND_HOURS_MEAN_FIELD,
             RATING_FIELD,
         ]].sort_values(by=RATING_FIELD)[:top_index]
 
+    def run(self, top_index: int = 1):
+        top_cities = self._get_top_cities(top_index)
         relevant_cities = []
-        logger.info(f'Top {top_index} city:')
         for city_name, series in top_cities.iterrows():
             logger.info(
-                f'{series[RATING_FIELD]}. City {city_name}: {series[TEMP_AVG_FIELD]} °C, '
-                f'average relevant hours: {series[RELEVANT_COND_HOURS_FIELD]}'
+                f'{series[RATING_FIELD]}. City {city_name}: {series[TEMP_AVG_MEAN_FIELD]} °C, '
+                f'average relevant hours: {series[RELEVANT_COND_HOURS_MEAN_FIELD]}'
             )
             relevant_cities.append((
                 city_name,
-                series[temp_avg_mean_field],
-                series[relevant_cond_hours_mean_field],
+                series[TEMP_AVG_MEAN_FIELD],
+                series[RELEVANT_COND_HOURS_MEAN_FIELD],
             ))
 
         return relevant_cities
