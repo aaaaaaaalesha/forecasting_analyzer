@@ -8,8 +8,14 @@ from tasks import (
     DataAggregationTask,
     DataAnalyzingTask,
 )
-from utils import DATE_FIELD, HOURS_START_FIELD, HOURS_END_FIELD, HOURS_COUNT_FIELD, RELEVANT_COND_HOURS_FIELD, \
-    TEMP_AVG_FIELD
+from utils import (
+    DATE_FIELD,
+    HOURS_START_FIELD,
+    HOURS_END_FIELD,
+    HOURS_COUNT_FIELD,
+    RELEVANT_COND_HOURS_FIELD,
+    TEMP_AVG_FIELD,
+)
 
 
 def test_data_fetching_task(yandex_weather_api):
