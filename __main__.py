@@ -43,13 +43,13 @@ if __name__ == '__main__':
         # DataAnalyzingTask.
         top_index = 3
         data_analysis = DataAnalyzingTask(aggregation_results_path)
-        resulted_cities = data_analysis.run(top_index=top_index)
+        relevant_cities = data_analysis.run(top_index=top_index)
         print(f'{top_index} most relevant cities:')
         for rating, (
                 city_name,
                 temperature,
                 relevant_days,
-        ) in enumerate(resulted_cities):
+        ) in enumerate(relevant_cities):
             print(
                 f'{rating + 1}. {city_name} - {temperature} °C '
                 f'- {round(relevant_days)} days'

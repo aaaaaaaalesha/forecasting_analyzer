@@ -253,7 +253,7 @@ class DataAnalyzingTask:
             RATING_FIELD,
         ]].sort_values(by=RATING_FIELD)[:top_index]
 
-    def run(self, top_index: int = 1):
+    def run(self, top_index: int = 1) -> list[tuple[str, float, float]]:
         top_cities = self._get_top_cities(top_index)
         relevant_cities = []
         for city_name, series in top_cities.iterrows():

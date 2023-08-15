@@ -177,7 +177,7 @@ def analyze_json(data):
         d_date = d_info.date
 
         time_start = time_start or d_date
-        time_end = d_date
+        # time_end = d_date
 
         days.append(d_info.to_json())
 
