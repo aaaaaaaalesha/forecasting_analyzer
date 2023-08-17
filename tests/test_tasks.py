@@ -57,7 +57,11 @@ def test_data_aggregation_task(city_to_analyzed_days_info):
     try:
         aggregation_results_path = data_aggregator.run(save_format='csv')
         assert aggregation_results_path.exists()
-        assert aggregation_results_path.is_file()
+        assert aggregation_results_path.parent.is_dir()
+        assert [
+            *aggregation_results_path.parent.glob('*.csv'),
+            *aggregation_results_path.parent.glob('*.json'),
+        ]
     finally:
         if aggregation_results_path is not None:
             # Remove created file.

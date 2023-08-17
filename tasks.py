@@ -177,7 +177,7 @@ class DataAggregationTask(Task):
                 path_to_results.mkdir()
             except (FileNotFoundError, OSError) as exc:
                 raise DataAggregationException from exc
-        self.path_to_results = path_to_results
+        self.path_to_results = path_to_results.absolute()
         logger.debug(f'Results will be saved to directory {self.path_to_results}')
 
     def _rank_relevant_cities(self) -> None:
