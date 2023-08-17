@@ -1,25 +1,23 @@
-import logging
 import json
-
+import logging
 from abc import ABC, abstractmethod
-from pathlib import Path
-from multiprocessing import cpu_count, Manager, Queue
 from concurrent.futures import (
     ThreadPoolExecutor,
     ProcessPoolExecutor,
 )
+from multiprocessing import cpu_count, Manager, Queue
+from pathlib import Path
+from urllib.error import HTTPError
 
 import pandas as pd
 
-from urllib.error import HTTPError
-
-from external.client import YandexWeatherAPI
-from external.analyzer import analyze_json
 from exceptions import (
     DataFetchingException,
     DataAggregationException,
     DataAnalyzingException,
 )
+from external.analyzer import analyze_json
+from external.client import YandexWeatherAPI
 from utils import (
     url_by_city_name,
     CITIES,
@@ -63,15 +61,15 @@ class DataFetchingTask(Task):
             logger.debug(f'Processing url {url} for city {city}')
             self.city_to_forecasting_data[city] = self.client.get_forecasting(url)
             logger.debug(f'Forecasting data successfully fetched for city {city}')
-        except (json.JSONDecodeError, HTTPError) as err:
-            logger.warning(f'Unable to fetch data for {city}: {err}')
-        except Exception as err:
-            logger.exception(err)
-            raise DataFetchingException(err)
+        except (json.JSONDecodeError, HTTPError) as exc:
+            logger.warning(f'Unable to fetch data for {city}: {exc}')
+        except Exception as exc:
+            logger.exception(exc)
+            raise DataFetchingException from exc
 
     def run(
             self,
-            cities: list[str] = CITIES,
+            cities: dict[str, str] = CITIES,
             max_workers: int = MAX_WORKERS,
             timeout: float | None = None,
     ) -> None:
@@ -79,10 +77,10 @@ class DataFetchingTask(Task):
             logger.info(f'Fetching forecasting started on {max_workers} workers')
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 executor.map(self.fetch_forecasting, cities, timeout=timeout)
-        except (TimeoutError, Exception) as err:
-            msg = f'Failed fetch forecasting data: {err}'
+        except (TimeoutError, Exception) as exc:
+            msg = f'Failed fetch forecasting data: {exc}'
             logger.exception(msg)
-            raise DataFetchingException(msg)
+            raise DataFetchingException from exc
         logger.info('Fetching forecasting finished')
 
 
@@ -178,7 +176,7 @@ class DataAggregationTask(Task):
             try:
                 path_to_results.mkdir()
             except (FileNotFoundError, OSError) as exc:
-                raise DataAggregationException(str(exc))
+                raise DataAggregationException from exc
         self.path_to_results = path_to_results
         logger.debug(f'Results will be saved to directory {self.path_to_results}')
 
@@ -213,11 +211,14 @@ class DataAggregationTask(Task):
             path = self.path_to_results / 'results.csv'
             self.days_analyze_df.to_csv(path, index=False)
             return path
-
-        if save_format == 'json':
+        elif save_format == 'json':
             path = self.path_to_results / 'results.json'
             self.days_analyze_df.to_json(path, orient='records', index=False)
             return path
+        else:
+            raise DataAggregationException(
+                f'Unsupported save format {save_format}'
+            )
 
 
 class DataAnalyzingTask:
@@ -241,10 +242,8 @@ class DataAnalyzingTask:
         try:
             parser = self.SOURCE_TO_PARSER[aggregation_path.suffix]
             self.analysing_df: pd.DataFrame = parser(aggregation_path)
-        except KeyError as exc:
-            raise DataAnalyzingException(str(exc))
         except Exception as exc:
-            raise DataAnalyzingException(str(exc))
+            raise DataAnalyzingException from exc
 
     def _get_top_cities(self, top_index: int = 1) -> pd.DataFrame:
         return self.analysing_df.groupby(CITY_FIELD).first()[[

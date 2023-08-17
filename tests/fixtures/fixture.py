@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -12,4 +13,5 @@ def yandex_weather_api():
 
 @pytest.fixture
 def aggregation_path():
-    return Path('.').parent.parent / 'mock_aggregation_data' / 'results.csv'
+    rel_path = Path('tests') / 'mock_aggregation_data' / 'results.csv'
+    return Path(rel_path).absolute()

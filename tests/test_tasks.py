@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+import pytest_dependency
 
 from tasks import (
     DataFetchingTask,
@@ -66,18 +67,14 @@ def test_data_analyzing_task(aggregation_path: Path):
         ('CAIRO', 33.394, 11.0),
         ('BEIJING', 31.6325, 9.75),
     ]
-    relevant_cities = data_analyzer.run(top_index=3)
+    top_index = 3
+    relevant_cities = data_analyzer.run(top_index=top_index)
     assert len(correct_results) == len(relevant_cities)
+    msgs = (
+        'Incorrect city name: %s, must be %s',
+        'Incorrect temperature: %s, must be %s',
+        'Incorrect relevant days count: %s, must be %s',
+    )
     for correct, relevant in zip(correct_results, relevant_cities):
-        assert (
-            correct[0] == relevant[0],
-            f'Incorrect city name: {relevant[0]}, must be {correct[0]}',
-        )
-        assert (
-            correct[1] == relevant[1],
-            f'Incorrect temperature: {relevant[0]}, must be {correct[0]}',
-        )
-        assert (
-            correct[2] == relevant[2],
-            f'Incorrect relevant days count: {relevant[0]}, must be {correct[0]}',
-        )
+        for i in range(3):
+            assert correct[i] == relevant[i], msgs[i] % (relevant[i], correct[i])

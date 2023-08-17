@@ -1,8 +1,8 @@
 import argparse
 import json
 import logging
-from dataclasses import dataclass, field
 from copy import deepcopy
+from dataclasses import dataclass, field
 from functools import reduce
 from operator import getitem
 from typing import Optional, List, Dict

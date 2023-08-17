@@ -1,9 +1,8 @@
 import json
 import logging
-
 from http import HTTPStatus
-from urllib.request import urlopen
 from urllib.error import HTTPError
+from urllib.request import urlopen
 
 logger = logging.getLogger(__name__)
 

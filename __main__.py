@@ -1,13 +1,12 @@
 import logging
-
 from multiprocessing import set_start_method
 
-from external.client import YandexWeatherAPI
 from exceptions import (
     DataFetchingException,
     DataAggregationException,
     DataAnalyzingException,
 )
+from external.client import YandexWeatherAPI
 from tasks import (
     DataFetchingTask,
     DataCalculationTask,
@@ -20,6 +19,7 @@ TIMEOUT = 5.
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
 
 if __name__ == '__main__':
+    logger = logging.getLogger(__name__)
     set_start_method('spawn')
     try:
         # DataFetchingTask.
@@ -59,8 +59,8 @@ if __name__ == '__main__':
             DataAggregationException,
             DataAnalyzingException,
     ) as exc:
-        print(exc)
+        logger.exception(exc)
         exit(1)
     except Exception as exc:
-        print(f'Uncaught exception: {exc}')
+        logger.error(f'Uncaught exception: {exc}')
         exit(1)
